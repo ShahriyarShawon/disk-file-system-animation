@@ -20,6 +20,7 @@ class First(Scene):
                 self.cptr = 0
             return c
 
+        # Create Filesystem Architecture
         superblock = Rectangle(width=4.0, height=1.0, color=BLUE)
         free_block_bitmap = Rectangle(width=4.0, height=1.0, color=RED)
         inodes = Rectangle(width=4.0, height=1.0, color=GREEN)
@@ -79,12 +80,14 @@ class First(Scene):
         )
         self.wait(2)
 
+        ## Fade out all but superblock
         superblock = rects[0]
         rects.remove(superblock)
         self.add(superblock)
         self.play(*[FadeOut(o) for o in self.mobjects if o is not superblock])
         self.wait(1)
 
+        # Animate Superblock
         magic_number = Rectangle(width=4.0, height=0.5)
         n_inode = Rectangle(width=4.0, height=0.5)
         n_inode_bitmap_blocks = Rectangle(width=4.0, height=0.5)
@@ -95,7 +98,6 @@ class First(Scene):
         next_free_inode_idx = Rectangle(width=4.0, height=0.5)
         padding = Rectangle(width=4.0, height=2.5)
 
-        # self.play(superblock.animate.move_to(ORIGIN))
         rects = (
             VGroup(
                 magic_number,
@@ -158,16 +160,49 @@ class First(Scene):
         self.play(*[Create(o) for o in arrows_and_labels])
         self.wait(4)
 
-        superblock = rects[0]
-        rects.remove(superblock)
-        self.add(superblock)
-        self.play(*[FadeOut(o) for o in self.mobjects if o is not superblock])
+        ## Fade out all
+        self.play(*[FadeOut(o) for o in self.mobjects])
         self.wait(1)
+
+        fields = [
+            "mode",
+            "uid",
+            "gid",
+            "file_size",
+            "access_time",
+            "modification_time",
+            "status_change_time",
+            "block_1",
+            "block_2",
+            "block_3",
+            "block_4",
+            "block_5",
+            "block_6",
+            "indirect_block",
+            "double_indirect_block",
+            "unused"
+        ]
+
+        inode_blocks = VGroup()
+        field_texts = []
+        for f in fields:
+            r = Rectangle(width=0.8, height=5.0).scale(0.75)
+            inode_blocks.add(r)
+        inode_blocks.arrange(RIGHT)
+        for f in range(len(fields)):
+            t = Text(fields[f]).scale(0.75 * 0.65).rotate(PI/2)
+            t.move_to(inode_blocks[f].get_center())
+            field_texts.append(t)
+        self.play(Create(inode_blocks))
+        self.play(*[Create(o) for o in field_texts])
+        self.wait(2)
+
 
 
 class LocateBlockInMap(Scene):
     def construct(self):
         Text.set_default(font="Iosevka Nerd Font Mono")
+        # Create List of Bytes
         bytes = []
         group = VGroup()
         for i in range(8):
@@ -189,6 +224,7 @@ class LocateBlockInMap(Scene):
         self.play(*[Create(o) for o in bytes])
         self.wait(2)
 
+        # Iterate through operations and then point to the correct byte
         values = ["38", "38/8", "4.75", "int(4.75)", "4"]
         t = Text(values[0]).shift(UP * 2).scale(0.75)
         for v in values:
@@ -203,6 +239,7 @@ class LocateBlockInMap(Scene):
         # block_partition = Text("38/8")
         # self.play(Create(block_idx), Create(byte), Create(block_partition))
 
+        ## Zoom into selected byte
         byte = group[4]
         group.remove(byte)
         self.add(byte)
@@ -211,6 +248,7 @@ class LocateBlockInMap(Scene):
 
         del group
 
+        # Create bits in byte
         group = VGroup()
         for i in range(8):
             r = Rectangle(width=0.5, height=0.5).scale(0.75)
@@ -229,6 +267,7 @@ class LocateBlockInMap(Scene):
         self.play(Transform(byte, group))
         self.play(*[Create(o) for o in bits])
 
+        ## iterate through math
         values = ["38", "38%8", "6"]
         t = Text(values[0]).shift(UP * 2).scale(0.75)
         for v in values:
@@ -237,6 +276,7 @@ class LocateBlockInMap(Scene):
             t = newt
             self.wait(0.4)
 
+        ## point to correct bit and flip it
         arrow = Arrow(start=t, end=group[6].get_center())
         self.play(Create(arrow))
 
@@ -246,3 +286,87 @@ class LocateBlockInMap(Scene):
         self.wait(2)
 
 
+class MakeDirectory(Scene):
+    def construct(self):
+        Text.set_default(font="Iosevka Nerd Font Mono")
+        self.colors = [BLUE, GOLD, TEAL, RED, YELLOW, MAROON, GREEN, PURPLE]
+        self.cptr = 0
+
+        def get_color():
+            c = self.colors[self.cptr]
+            self.cptr += 1
+            if self.cptr >= len(self.colors):
+                self.cptr = 0
+            return c
+        # Animate Superblock
+        magic_number = Rectangle(width=4.0, height=0.5)
+        n_inode = Rectangle(width=4.0, height=0.5)
+        n_inode_bitmap_blocks = Rectangle(width=4.0, height=0.5)
+        n_blocks = Rectangle(width=4.0, height=1)
+        max_file_size = Rectangle(width=4.0, height=0.5)
+        block_size = Rectangle(width=4.0, height=0.5)
+        root_inode_idx = Rectangle(width=4.0, height=0.5)
+        next_free_inode_idx = Rectangle(width=4.0, height=0.5)
+        padding = Rectangle(width=4.0, height=2.5)
+
+        rects = (
+            VGroup(
+                magic_number,
+                n_inode,
+                n_inode_bitmap_blocks,
+                n_blocks,
+                max_file_size,
+                block_size,
+                root_inode_idx,
+                next_free_inode_idx,
+                padding,
+            )
+            .arrange(DOWN, buff=0.1)
+            .shift(RIGHT * 1.5)
+        )
+        fields = [
+            "Magic Number",
+            "Number of I-Nodes",
+            "Number of Bitmap Blocks",
+            "Number of Blocks",
+            "Max File Size",
+            "Block Size",
+            "Root I-Node Position",
+            "Next Free I-Node Index",
+            "Padding",
+        ]
+
+        inner_text = [
+            "u32: 0xDEADBEEF",
+            "u16: ???",
+            "u16: 1",
+            "u16: DiskSize/BlockSize",
+            "u16: 7KB",
+            "u16: 1024B",
+            "u16: 1",
+            "u16: 1",
+            "[0u8: 1024-Size so far]",
+        ]
+        arrows_and_labels = []
+        for i in range(len(rects)):
+            c = get_color()
+            rects[i].set_stroke(c)
+
+            label = Text(fields[i], color=c).shift(LEFT * 3).scale(0.5)
+            label.next_to(rects[i], LEFT, buff=1)
+
+            arrow = Arrow(start=label.get_right(),
+                          end=rects[i].get_left(), color=c)
+            arrow.next_to(label, RIGHT, buff=0.2)
+
+            inner = (
+                Text(inner_text[i], color=c).move_to(
+                    rects[i].get_center()).scale(0.4)
+            )
+
+            arrows_and_labels.append(inner)
+            arrows_and_labels.append(label)
+            arrows_and_labels.append(arrow)
+        self.play(Create(rects))
+        self.play(*[Create(o) for o in arrows_and_labels])
+        self.wait(4)
